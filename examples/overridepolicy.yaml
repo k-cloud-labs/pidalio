@@ -1,0 +1,19 @@
+kind: OverridePolicy
+apiVersion: policy.kcloudlabs.io/v1alpha1
+metadata:
+  name: op-test
+  namespace: default
+spec:
+  resourceSelectors:
+    - apiVersion: v1
+      kind: Pod
+      name: web-1
+  overrideRules:
+    - targetOperations:
+        - Create
+        - Update
+      overriders:
+        plaintext:
+          - path: /metadata/annotations/hello
+            operator: add
+            value: world

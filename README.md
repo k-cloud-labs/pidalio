@@ -11,6 +11,24 @@ If you want to use it in serverside as a webhook, please use https://github.com/
 
 
 ## Quick Start
+
+### Apply crd files to your cluster
+```shell
+kubectl apply -f https://raw.githubusercontent.com/k-cloud-labs/pkg/main/charts/_crds/bases/policy.kcloudlabs.io_overridepolicies.yaml
+kubectl apply -f https://raw.githubusercontent.com/k-cloud-labs/pkg/main/charts/_crds/bases/policy.kcloudlabs.io_clusteroverridepolicies.yaml
+```
+
+OverridePolicy is used to mutate object in the same namespace.  
+ClusterOverridePolicy can mutate object in any namespace.
+
+For cluster scoped resource: 
+- Apply ClusterOverridePolicy by policies name in ascending;  
+
+For namespaced scoped resource, apply order is:
+- First apply ClusterOverridePolicy;
+- Then apply OverridePolicy;
+
+### Add transport middleware
 What you need to do is just call `Wrap` func after `rest.Config` initialized and before client to initialize.
 
 ```go
