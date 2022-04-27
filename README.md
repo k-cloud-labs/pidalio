@@ -6,8 +6,11 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/k-cloud-labs/pidalio)](https://goreportcard.com/report/github.com/k-cloud-labs/pidalio)
 [![Go doc](https://img.shields.io/badge/go.dev-reference-brightgreen?logo=go&logoColor=white&style=flat)](https://pkg.go.dev/github.com/k-cloud-labs/pidalio)
 
-A transport middleware working in clientside for client-go to mutate any k8s resource via (Cluster)OverridePolicy .  
-If you want to use it in serverside as a webhook, please use https://github.com/k-cloud-labs/kinitiras.
+A transport middleware working in clientside for client-go to mutate any k8s resource via (Cluster)OverridePolicy.  
+
+If you want to use it in serverside as a webhook, please use https://github.com/k-cloud-labs/kinitiras.  
+
+The difference is that the implementation of clientside can only update properties kube-apiserver allowed, but the implementation of serverside can update everything.
 
 
 ## Quick Start
