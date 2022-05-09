@@ -33,6 +33,10 @@ For namespaced scoped resource, apply order is:
 What you need to do is just call `Wrap` func after `rest.Config` initialized and before client to initialize.
 
 ```go
+import(
+	"github.com/k-cloud-labs/pidalio"
+)
+
 config.Wrap(pidalio.NewPolicyTransport(config, stopCh).Wrap)
 ```
 
