@@ -17,7 +17,7 @@ import (
 	"github.com/k-cloud-labs/pkg/test/helper"
 	"github.com/k-cloud-labs/pkg/test/mock"
 	"github.com/k-cloud-labs/pkg/util"
-	converter "github.com/k-cloud-labs/pkg/util/converter"
+	"github.com/k-cloud-labs/pkg/util/converter"
 )
 
 func TestPolicyTransport_RoundTrip(t *testing.T) {
@@ -86,11 +86,11 @@ func TestPolicyTransport_RoundTrip(t *testing.T) {
 
 	opLister.EXPECT().List(labels.Everything()).Return([]*policyv1alpha1.OverridePolicy{
 		overridePolicy1,
-	}, nil)
+	}, nil).AnyTimes()
 
 	copLister.EXPECT().List(labels.Everything()).Return([]*policyv1alpha1.ClusterOverridePolicy{
 		overridePolicy2,
-	}, nil)
+	}, nil).AnyTimes()
 
 	manager := overridemanager.NewOverrideManager(copLister, opLister)
 
@@ -112,8 +112,8 @@ func TestPolicyTransport_RoundTrip(t *testing.T) {
 			wantedErr: nil,
 			wantedAnnotations: map[string]string{
 				"foo":                        "bar",
-				util.AppliedOverrides:        `[{"policyName":"overridePolicy1","overriders":{"plaintext":[{"path":"/metadata/annotations","operator":"add","value":{"foo":"bar"}}]}}]`,
-				util.AppliedClusterOverrides: `[{"policyName":"overridePolicy2","overriders":{"plaintext":[{"path":"/metadata/annotations","operator":"add","value":{"hello":"world"}}]}}]`,
+				util.AppliedOverrides:        `[{"policyName":"overridePolicy1","overriders":{"plaintext":[{"path":"/metadata/annotations","op":"add","value":{"foo":"bar"}}]}}]`,
+				util.AppliedClusterOverrides: `[{"policyName":"overridePolicy2","overriders":{"plaintext":[{"path":"/metadata/annotations","op":"add","value":{"hello":"world"}}]}}]`,
 			},
 		},
 	}
