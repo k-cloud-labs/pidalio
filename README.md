@@ -42,4 +42,4 @@ config.Wrap(pidalio.NewPolicyTransport(config, stopCh).Wrap)
 
 ## Feature
 - [x] Support mutate k8s resource by (Cluster)OverridePolicy via plaintext jsonpatch.
-- [x] Support mutate k8s resource by (Cluster)OverridePolicy programmable via cue.
+- [x] Support mutate k8s resource by (Cluster)OverridePolicy programmable via [CUE](https://cuelang.org/).
