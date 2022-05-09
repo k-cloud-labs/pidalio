@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/k-cloud-labs/pkg/util/overridemanager"
+	admissionv1 "k8s.io/api/admission/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -16,12 +17,12 @@ import (
 	"github.com/k-cloud-labs/pkg/test/helper"
 	"github.com/k-cloud-labs/pkg/test/mock"
 	"github.com/k-cloud-labs/pkg/util"
-	utilhelper "github.com/k-cloud-labs/pkg/util/helper"
+	converter "github.com/k-cloud-labs/pkg/util/converter"
 )
 
 func TestPolicyTransport_RoundTrip(t *testing.T) {
 	deployment := helper.NewDeployment(metav1.NamespaceDefault, "test")
-	deploymentObj, _ := utilhelper.ToUnstructured(deployment)
+	deploymentObj, _ := converter.ToUnstructured(deployment)
 
 	overriders1 := policyv1alpha1.Overriders{
 		Plaintext: []policyv1alpha1.PlaintextOverrider{
@@ -57,7 +58,7 @@ func TestPolicyTransport_RoundTrip(t *testing.T) {
 			},
 			OverrideRules: []policyv1alpha1.RuleWithOperation{
 				{
-					TargetOperations: []string{util.Create},
+					TargetOperations: []admissionv1.Operation{admissionv1.Create},
 					Overriders:       overriders1,
 				},
 			},
@@ -70,7 +71,7 @@ func TestPolicyTransport_RoundTrip(t *testing.T) {
 		Spec: policyv1alpha1.OverridePolicySpec{
 			OverrideRules: []policyv1alpha1.RuleWithOperation{
 				{
-					TargetOperations: []string{util.Create, util.Update},
+					TargetOperations: []admissionv1.Operation{admissionv1.Create, admissionv1.Update},
 					Overriders:       overriders2,
 				},
 			},
@@ -98,7 +99,7 @@ func TestPolicyTransport_RoundTrip(t *testing.T) {
 		opLister          v1alpha10.OverridePolicyLister
 		copLister         v1alpha10.ClusterOverridePolicyLister
 		resource          *unstructured.Unstructured
-		operation         string
+		operation         admissionv1.Operation
 		wantedAnnotations map[string]string
 		wantedErr         error
 	}{
@@ -107,7 +108,7 @@ func TestPolicyTransport_RoundTrip(t *testing.T) {
 			opLister:  opLister,
 			copLister: copLister,
 			resource:  deploymentObj,
-			operation: util.Create,
+			operation: admissionv1.Create,
 			wantedErr: nil,
 			wantedAnnotations: map[string]string{
 				"foo":                        "bar",

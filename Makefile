@@ -64,5 +64,10 @@ fmt-check: ## Check project files format info
 		exit 1; \
 	fi;
 
+.PHONY: vet
 vet: ## Vet project files
 	@$(GO) vet $(VETPACKAGES)
+
+.PHONY: checkall
+checkall: fmt-check vet ## Check all
+	hack/verify-staticcheck.sh

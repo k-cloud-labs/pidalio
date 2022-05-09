@@ -9,6 +9,7 @@ import (
 	"github.com/k-cloud-labs/pkg/client/informers/externalversions"
 	"github.com/k-cloud-labs/pkg/util"
 	"github.com/k-cloud-labs/pkg/util/overridemanager"
+	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
@@ -58,11 +59,11 @@ func (tr *policyTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		return nil, err
 	}
 
-	var operation string
+	var operation admissionv1.Operation
 	if req.Method == http.MethodPost {
-		operation = util.Create
+		operation = admissionv1.Create
 	} else {
-		operation = util.Update
+		operation = admissionv1.Update
 	}
 
 	if err := ApplyOverridePolicy(tr.overrideManager, unstructuredObj, operation); err != nil {
@@ -80,7 +81,7 @@ func (tr *policyTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	return tr.delegate.RoundTrip(req)
 }
 
-func ApplyOverridePolicy(manager overridemanager.OverrideManager, unstructuredObj *unstructured.Unstructured, operation string) error {
+func ApplyOverridePolicy(manager overridemanager.OverrideManager, unstructuredObj *unstructured.Unstructured, operation admissionv1.Operation) error {
 	cops, ops, err := manager.ApplyOverridePolicies(unstructuredObj, operation)
 	if err != nil {
 		klog.ErrorS(err, "Failed to apply overrides.", "resource", klog.KObj(unstructuredObj))

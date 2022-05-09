@@ -8,9 +8,7 @@
 
 A transport middleware working in clientside for client-go to mutate any k8s resource via (Cluster)OverridePolicy.  
 
-If you want to use it in serverside as a webhook, please use https://github.com/k-cloud-labs/kinitiras.  
-
-The difference is that the implementation of clientside can only update properties kube-apiserver allowed, but the implementation of serverside can update everything.
+If you want to use it in serverside as a webhook, please use https://github.com/k-cloud-labs/kinitiras.
 
 
 ## Quick Start
@@ -40,4 +38,4 @@ config.Wrap(pidalio.NewPolicyTransport(config, stopCh).Wrap)
 
 ## Feature
 - [x] Support mutate k8s resource by (Cluster)OverridePolicy via plaintext jsonpatch.
-- [ ] Support mutate k8s resource by (Cluster)OverridePolicy programmable via cue.
+- [x] Support mutate k8s resource by (Cluster)OverridePolicy programmable via cue.
