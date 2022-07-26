@@ -7,8 +7,8 @@ import (
 
 	"github.com/k-cloud-labs/pkg/client/clientset/versioned"
 	"github.com/k-cloud-labs/pkg/client/informers/externalversions"
-	"github.com/k-cloud-labs/pkg/util"
-	"github.com/k-cloud-labs/pkg/util/overridemanager"
+	"github.com/k-cloud-labs/pkg/utils"
+	"github.com/k-cloud-labs/pkg/utils/overridemanager"
 	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/rest"
@@ -121,7 +121,7 @@ func recordAppliedOverrides(cops *overridemanager.AppliedOverrides, ops *overrid
 			return nil, err
 		}
 		if appliedBytes != nil {
-			annotations[util.AppliedClusterOverrides] = string(appliedBytes)
+			annotations[utils.AppliedClusterOverrides] = string(appliedBytes)
 		}
 	}
 
@@ -131,7 +131,7 @@ func recordAppliedOverrides(cops *overridemanager.AppliedOverrides, ops *overrid
 			return nil, err
 		}
 		if appliedBytes != nil {
-			annotations[util.AppliedOverrides] = string(appliedBytes)
+			annotations[utils.AppliedOverrides] = string(appliedBytes)
 		}
 	}
 

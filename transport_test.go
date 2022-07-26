@@ -5,7 +5,9 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/k-cloud-labs/pkg/util/overridemanager"
+	"github.com/k-cloud-labs/pkg/utils"
+	"github.com/k-cloud-labs/pkg/utils/overridemanager"
+	"github.com/k-cloud-labs/pkg/utils/util"
 	admissionv1 "k8s.io/api/admission/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,13 +18,11 @@ import (
 	v1alpha10 "github.com/k-cloud-labs/pkg/client/listers/policy/v1alpha1"
 	"github.com/k-cloud-labs/pkg/test/helper"
 	"github.com/k-cloud-labs/pkg/test/mock"
-	"github.com/k-cloud-labs/pkg/util"
-	"github.com/k-cloud-labs/pkg/util/converter"
 )
 
 func TestPolicyTransport_RoundTrip(t *testing.T) {
 	deployment := helper.NewDeployment(metav1.NamespaceDefault, "test")
-	deploymentObj, _ := converter.ToUnstructured(deployment)
+	deploymentObj, _ := util.ToUnstructured(deployment)
 
 	overriders1 := policyv1alpha1.Overriders{
 		Plaintext: []policyv1alpha1.PlaintextOverrider{
@@ -111,9 +111,9 @@ func TestPolicyTransport_RoundTrip(t *testing.T) {
 			operation: admissionv1.Create,
 			wantedErr: nil,
 			wantedAnnotations: map[string]string{
-				"foo":                        "bar",
-				util.AppliedOverrides:        `[{"policyName":"overridePolicy1","overriders":{"plaintext":[{"path":"/metadata/annotations","op":"add","value":{"foo":"bar"}}]}}]`,
-				util.AppliedClusterOverrides: `[{"policyName":"overridePolicy2","overriders":{"plaintext":[{"path":"/metadata/annotations","op":"add","value":{"hello":"world"}}]}}]`,
+				"foo":                         "bar",
+				utils.AppliedOverrides:        `[{"policyName":"overridePolicy1","overriders":{"plaintext":[{"path":"/metadata/annotations","op":"add","value":{"foo":"bar"}}]}}]`,
+				utils.AppliedClusterOverrides: `[{"policyName":"overridePolicy2","overriders":{"plaintext":[{"path":"/metadata/annotations","op":"add","value":{"hello":"world"}}]}}]`,
 			},
 		},
 	}
