@@ -3,24 +3,25 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"math/rand"
 	"strconv"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/k-cloud-labs/pidalio"
 )
 
 func main() {
+	klog.InitFlags(flag.CommandLine)
 	flag.Parse()
 
 	config := ctrl.GetConfigOrDie()
 
 	// the black magic code
-	config.Wrap(pidalio.NewPolicyTransport(config, make(chan struct{})).Wrap)
+	pidalio.RegisterPolicyTransport(config, make(chan struct{}))
 
 	client := kubernetes.NewForConfigOrDie(config)
 
@@ -34,5 +35,5 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(pod)
+	klog.InfoS("update pod success", "pod", pod)
 }

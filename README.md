@@ -30,16 +30,19 @@ For namespaced scoped resource, apply order is:
 - Then apply OverridePolicy;
 
 ### Add transport middleware
-What you need to do is just call `Wrap` func after `rest.Config` initialized and before client to initialize.
+What you need to do is just call `RegisterPolicyTransport` func after `rest.Config` initialized and before client to initialize.
 
 ```go
 import(
 	"github.com/k-cloud-labs/pidalio"
 )
 
-config.Wrap(pidalio.NewPolicyTransport(config, stopCh).Wrap)
+// the black magic code
+pidalio.RegisterPolicyTransport(config, make(chan struct{}))
+
 ```
 
 ## Feature
 - [x] Support mutate k8s resource by (Cluster)OverridePolicy via plaintext jsonpatch.
 - [x] Support mutate k8s resource by (Cluster)OverridePolicy programmable via [CUE](https://cuelang.org/).
+- [x] Support render template to cue in transport(even policy is not created by others) 

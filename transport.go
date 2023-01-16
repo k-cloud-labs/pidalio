@@ -2,41 +2,49 @@ package pidalio
 
 import (
 	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 
-	"github.com/k-cloud-labs/pkg/client/clientset/versioned"
-	"github.com/k-cloud-labs/pkg/client/informers/externalversions"
-	"github.com/k-cloud-labs/pkg/utils"
-	"github.com/k-cloud-labs/pkg/utils/overridemanager"
+	jsonpatch "github.com/evanphx/json-patch"
+	jsonpatchv2 "gomodules.xyz/jsonpatch/v2"
 	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
+
+	"github.com/k-cloud-labs/pkg/utils"
+	"github.com/k-cloud-labs/pkg/utils/interrupter"
+	"github.com/k-cloud-labs/pkg/utils/overridemanager"
 )
 
 type policyTransport struct {
-	delegate        http.RoundTripper
-	overrideManager overridemanager.OverrideManager
+	delegate http.RoundTripper
+
+	overrideManager   overridemanager.OverrideManager
+	policyInterrupter interrupter.PolicyInterrupter
 }
 
 var _ http.RoundTripper = &policyTransport{}
 
-func NewPolicyTransport(config *rest.Config, stopCh chan struct{}) *policyTransport {
-	client := versioned.NewForConfigOrDie(config)
+// RegisterPolicyTransport init transport and register to wrapper.
+func RegisterPolicyTransport(config *rest.Config, stopCh chan struct{}) {
+	var (
+		p = &policyTransport{}
+		s = &setupManager{}
+	)
+	config.Wrap(p.Wrap)
 
-	factory := externalversions.NewSharedInformerFactory(client, 0)
-	opInformer := factory.Policy().V1alpha1().OverridePolicies()
-	copInformer := factory.Policy().V1alpha1().ClusterOverridePolicies()
-	opInformer.Informer()
-	copInformer.Informer()
-
-	factory.Start(stopCh)
-	factory.WaitForCacheSync(stopCh)
-
-	return &policyTransport{
-		overrideManager: overridemanager.NewOverrideManager(copInformer.Lister(), opInformer.Lister()),
+	if err := s.setupAll(config, stopCh); err != nil {
+		klog.Fatalf("setup transport failed with error=%v", err)
 	}
+
+	p.overrideManager = s.overrideManager
+	p.policyInterrupter = s.policyInterrupterManager
+
+	if err := s.waitForCacheSync(); err != nil {
+		klog.Fatalf("sync cache failed with error=%v", err)
+	} // wait sync policies
 }
 
 func (tr *policyTransport) Wrap(delegate http.RoundTripper) http.RoundTripper {
@@ -66,8 +74,19 @@ func (tr *policyTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		operation = admissionv1.Update
 	}
 
-	if err := ApplyOverridePolicy(tr.overrideManager, unstructuredObj, operation); err != nil {
+	patches, err := tr.policyInterrupter.OnMutating(unstructuredObj, nil, operation)
+	if err != nil {
 		return nil, err
+	}
+
+	if len(patches) > 0 {
+		if err = applyJSONPatch(unstructuredObj, patches); err != nil {
+			return nil, err
+		}
+	} else {
+		if err = ApplyOverridePolicy(tr.overrideManager, unstructuredObj, operation); err != nil {
+			return nil, err
+		}
 	}
 
 	newBody, err := unstructuredObj.MarshalJSON()
@@ -82,7 +101,7 @@ func (tr *policyTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 }
 
 func ApplyOverridePolicy(manager overridemanager.OverrideManager, unstructuredObj *unstructured.Unstructured, operation admissionv1.Operation) error {
-	cops, ops, err := manager.ApplyOverridePolicies(unstructuredObj, operation)
+	cops, ops, err := manager.ApplyOverridePolicies(unstructuredObj, nil, operation)
 	if err != nil {
 		klog.ErrorS(err, "Failed to apply overrides.", "resource", klog.KObj(unstructuredObj))
 		return err
@@ -136,4 +155,30 @@ func recordAppliedOverrides(cops *overridemanager.AppliedOverrides, ops *overrid
 	}
 
 	return annotations, nil
+}
+
+// applyJSONPatch applies the override on to the given unstructured object.
+func applyJSONPatch(obj *unstructured.Unstructured, overrides []jsonpatchv2.JsonPatchOperation) error {
+	jsonPatchBytes, err := json.Marshal(overrides)
+	if err != nil {
+		return err
+	}
+
+	patch, err := jsonpatch.DecodePatch(jsonPatchBytes)
+	if err != nil {
+		return err
+	}
+
+	objectJSONBytes, err := obj.MarshalJSON()
+	if err != nil {
+		return err
+	}
+
+	patchedObjectJSONBytes, err := patch.Apply(objectJSONBytes)
+	if err != nil {
+		return err
+	}
+
+	err = obj.UnmarshalJSON(patchedObjectJSONBytes)
+	return err
 }
