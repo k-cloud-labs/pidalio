@@ -5,14 +5,16 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/k-cloud-labs/pkg/utils"
-	"github.com/k-cloud-labs/pkg/utils/overridemanager"
-	"github.com/k-cloud-labs/pkg/utils/util"
+	jsonpatchv2 "gomodules.xyz/jsonpatch/v2"
 	admissionv1 "k8s.io/api/admission/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+
+	"github.com/k-cloud-labs/pkg/utils"
+	"github.com/k-cloud-labs/pkg/utils/overridemanager"
+	"github.com/k-cloud-labs/pkg/utils/util"
 
 	policyv1alpha1 "github.com/k-cloud-labs/pkg/apis/policy/v1alpha1"
 	v1alpha10 "github.com/k-cloud-labs/pkg/client/listers/policy/v1alpha1"
@@ -92,7 +94,7 @@ func TestPolicyTransport_RoundTrip(t *testing.T) {
 		overridePolicy2,
 	}, nil).AnyTimes()
 
-	manager := overridemanager.NewOverrideManager(copLister, opLister)
+	manager := overridemanager.NewOverrideManager(nil, copLister, opLister)
 
 	tests := []struct {
 		name              string
@@ -124,6 +126,114 @@ func TestPolicyTransport_RoundTrip(t *testing.T) {
 			}
 			if !reflect.DeepEqual(deploymentObj.GetAnnotations(), tt.wantedAnnotations) {
 				t.Errorf("ApplyOverridePolicy() Annotation = %v, want %v", deploymentObj.GetAnnotations(), tt.wantedAnnotations)
+			}
+		})
+	}
+}
+
+func Test_applyJSONPatch(t *testing.T) {
+	type args struct {
+		objStr    string
+		overrides []jsonpatchv2.JsonPatchOperation
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "1",
+			args: args{
+				objStr: `
+{
+"apiVersion": "v1",
+"kind": "Pod",
+"metadata":{
+	"name":"web-1",
+	"annotations": {
+		"owner": "pidalio"
+}
+}
+}
+`,
+				overrides: []jsonpatchv2.JsonPatchOperation{
+					{
+						Operation: "add",
+						Path:      "/metadata/annotations/hello",
+						Value:     "world",
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			obj := new(unstructured.Unstructured)
+			if err := obj.UnmarshalJSON([]byte(tt.args.objStr)); err != nil {
+				t.Errorf("unmarshal error = %v", err)
+				return
+			}
+			if err := applyJSONPatch(obj, tt.args.overrides); (err != nil) != tt.wantErr {
+				t.Errorf("applyJSONPatch() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_bytesToUnstructured(t *testing.T) {
+	type args struct {
+		bytes []byte
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *unstructured.Unstructured
+		wantErr bool
+	}{
+		{
+			name: "1",
+			args: args{
+				bytes: []byte(`
+{
+"apiVersion": "v1",
+"kind": "Pod",
+"metadata":{
+	"name":"web-1",
+	"annotations": {
+		"owner": "pidalio"
+}
+}
+}
+`),
+			},
+			want: &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "v1",
+				"kind":       "Pod",
+				"metadata": map[string]interface{}{
+					"name": "web-1",
+					"annotations": map[string]interface{}{
+						"owner": "pidalio",
+					},
+				},
+			}},
+			wantErr: false,
+		},
+		{
+			name:    "err",
+			args:    args{},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := bytesToUnstructured(tt.args.bytes)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("bytesToUnstructured() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("bytesToUnstructured() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -7,13 +7,45 @@ spec:
   resourceSelectors:
     - apiVersion: v1
       kind: Pod
+      namespace: default
       name: web-1
   overrideRules:
     - targetOperations:
-        - Create
-        - Update
+        - CREATE
+        - UPDATE
       overriders:
         plaintext:
           - path: /metadata/annotations/hello
-            operator: add
+            op: add
             value: world
+    - targetOperations:
+        - CREATE
+        - UPDATE
+      overriders:
+        cue: |-
+          object: _ @tag(object)
+          
+          patches: [
+            if object.metadata.annotations == _|_ {
+              {
+                op: "add"
+                path: "/metadata/annotations"
+                value: {}
+              }
+            },
+            {
+              op: "add"
+              path: "/metadata/annotations/added-by"
+              value: "cue"
+            }
+          ]
+    - targetOperations:
+        - CREATE
+        - UPDATE
+      overriders:
+        template:
+          type: annotations
+          operation: add
+          path: updated-by
+          value:
+            string: templatedPolicy
